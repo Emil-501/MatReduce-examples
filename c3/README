@@ -1,0 +1,24 @@
+Case3: IPSG Firewall + ACL + NAT + Router
+
+Original Match Times : 16
+Optimized Match Times: 11
+
+The program in this case has four NFs, including Firewall in terms of IPSG, ACL, NAT and Router. We optimize the tables of the first three NFs, while doing nothing on Router since there exsits table applying dependencies among NAT tables and Router tables. See p4src/optimize.p4 and rules/optimize.txt for more details of our mechanism.
+
+To run this demo, you should open two terminals, T1 and T2:
+
+1.start mininet in T1:
+* ./run.sh p4src/[origin.p4|optimize.p4]
+
+2.populate control rules in T2:
+* ./set_switch.sh rules/[origin.txt|optimize.txt]
+
+3.Observe TCP traffics inside mininet:
+
+mininet> xterm h1 h2
+
+h2> arp -s 10.0.0.1 00:00:00:00:00:01
+h2> iperf -s -i 1
+
+h1> arp -s 10.0.0.2 00:00:00:00:00:02
+h1> iperf -c 10.0.0.2 -t 60 -i 1

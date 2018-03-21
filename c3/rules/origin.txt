@@ -1,0 +1,18 @@
+table_add ipv4_sg nop 0x000000000001 10.0.0.1 =>
+table_add ipv4_sg nop 0x000000000002 10.0.0.2 =>
+table_set_default ipv4_sg sg_mark
+table_add ipv4_tcp_acl nop 1 10.0.0.1&&&255.255.255.255 10.0.0.2&&&255.255.255.255 0&&&0 0&&&0 0&&&0 => 1
+table_add ipv4_tcp_acl nop 2 10.0.0.2&&&255.255.255.255 10.0.0.1&&&255.255.255.255 0&&&0 0&&&0 0&&&0 => 1
+table_set_default ipv4_tcp_acl acl_mark
+table_add nat nat_int_to_ext 10.0.0.1&&&255.255.255.255 0&&&0 0&&&0 0&&&0 => 10.0.0.1 0 1
+table_add nat nat_int_to_ext 10.0.0.2&&&255.255.255.255 0&&&0 0&&&0 0&&&0 => 10.0.0.2 0 1
+table_add ipv4_lpm set_nhop 10.0.0.1/32 => 10.0.0.1 1
+table_add ipv4_lpm set_nhop 10.0.0.2/32 => 10.0.0.2 2
+table_add forward set_dmac 10.0.0.1 => 00:00:00:00:00:01
+table_add forward set_dmac 10.0.0.2 => 00:00:00:00:00:02
+table_add send_frame handle_forward 0 0x01&&&0xff => 00:00:00:00:00:01 1
+table_add send_frame handle_forward 0 0x02&&&0xff => 00:00:00:00:00:02 1
+table_add send_frame handle_fake 1 0&&&0 => 1
+table_add send_frame handle_denied 2 0&&&0 => 1
+table_add send_frame handle_unknown 3 0&&&0 => 1
+table_set_default send_frame handle_unknown

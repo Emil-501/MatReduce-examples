@@ -1,0 +1,41 @@
+// table1: action1: nop(a>>0), action2: drop(a>>1);
+// table2: action3: nat_int_to_ext(a>>2), action4: nat_ext_to_int(a>>3).
+//
+// the priority is reversed, that means the highest priority is 0 in real
+// image-real mapping: 1-4, 2-3, 3-2, 4-1
+//
+// (1)default rule of all miss
+//
+// table_add composed_t _drop 0&&&0 0&&&0 0&&&0 0&&&0 0&&&0 =>
+//
+// (2)default rule of ipv4_sg; go table1, do action2(0010), action2 is default(0010), logic priority=1
+//
+table_add composed_t composed_a 0&&&0 0&&&0 0&&&0 0&&&0 0&&&0 => 2 2 0 0 0 4
+//
+// (3)original hit rules of ipv4_sg; go table1, do action1(0001), action1 is not default(0), logic priority=2
+//
+table_add composed_t composed_a 00:00:00:00:00:01&&&0xFFFFFF 10.0.0.1&&&255.255.255.255 0&&&0 0&&&0 0&&&0 => 1 0 0 0 0 3
+table_add composed_t composed_a 00:00:00:00:00:02&&&0xFFFFFF 10.0.0.2&&&255.255.255.255 0&&&0 0&&&0 0&&&0 => 1 0 0 0 0 3
+//
+// (4)original hit rules of nat; go table2, do action3(0100), action3 is not default(0), logic priority=2
+//
+table_add composed_t composed_a 0&&&0 10.0.0.1&&&255.255.255.255 10.0.0.2&&&255.255.255.255 0&&&0 0&&&0 => 4 0 10.0.0.1 0 0 3
+table_add composed_t composed_a 0&&&0 10.0.0.2&&&255.255.255.255 10.0.0.1&&&255.255.255.255 0&&&0 0&&&0 => 4 0 10.0.0.2 0 0 3
+//
+// (5)found overlap, hit rules of (3) + (4), because the forth bit of (3) != 0
+// 1.go table1, do action1(0001), action1 is not default(0), logic priority=2
+// 2.go table2, do action3(0100), action3 is not default(0), logic priority=2
+// = do action1,3(0101), action1 is not default, action3 is not default(0), logic priority=4
+//
+table_add composed_t composed_a 00:00:00:00:00:01&&&0xFFFFFF 10.0.0.1&&&255.255.255.255 10.0.0.2&&&255.255.255.255 0&&&0 0&&&0 => 5 0 10.0.0.1 0 0 2
+table_add composed_t composed_a 00:00:00:00:00:02&&&0xFFFFFF 10.0.0.2&&&255.255.255.255 10.0.0.1&&&255.255.255.255 0&&&0 0&&&0 => 5 0 10.0.0.2 0 0 2
+//
+// rules for other tables
+table_set_default ecmp_group drop
+table_set_default ecmp_nhop drop
+table_add ecmp_group set_ecmp_select 10.0.0.1/32 => 0 1
+table_add ecmp_group set_ecmp_select 10.0.0.2/32 => 1 1
+table_add ecmp_nhop set_nhop 0 => 00:00:00:00:00:01 1
+table_add ecmp_nhop set_nhop 1 => 00:00:00:00:00:02 2
+table_add send_frame rewrite_mac 1 => 00:00:00:00:00:02
+table_add send_frame rewrite_mac 2 => 00:00:00:00:00:01

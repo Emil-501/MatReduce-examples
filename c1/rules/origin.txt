@@ -1,0 +1,11 @@
+table_set_default ipv4_tcp_acl drop
+table_set_default ecmp_group drop
+table_set_default ecmp_nhop drop
+table_add ipv4_tcp_acl nop 1 10.0.0.1&&&255.255.255.255 10.0.0.2&&&255.255.255.255 0&&&0 0&&&0 => 1
+table_add ipv4_tcp_acl nop 2 10.0.0.2&&&255.255.255.255 10.0.0.1&&&255.255.255.255 0&&&0 0&&&0 => 1
+table_add ecmp_group set_ecmp_select 10.0.0.1/32 => 0 1
+table_add ecmp_group set_ecmp_select 10.0.0.2/32 => 1 1
+table_add ecmp_nhop set_nhop 0 => 00:00:00:00:00:01 10.0.0.1 1
+table_add ecmp_nhop set_nhop 1 => 00:00:00:00:00:02 10.0.0.2 2
+table_add send_frame rewrite_mac 1 => 00:00:00:00:00:02
+table_add send_frame rewrite_mac 2 => 00:00:00:00:00:01
